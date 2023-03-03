@@ -17,7 +17,6 @@ def find_self(test_img):
     result[test_R>150] = 0
     result[test_B>120] = 0
     result[result>0] = 255
-    cv2.imshow("self", result)
     return find(result)
 
 def find_oppo(test_img):
@@ -27,6 +26,5 @@ def find_oppo(test_img):
     result[test_R<150] = 0
     result[test_B>120] = 0
     result[result>0] = 255
-    cv2.imshow("oppo", result)
     return find(result)
 

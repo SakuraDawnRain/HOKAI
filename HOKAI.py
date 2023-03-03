@@ -4,19 +4,30 @@ from adbutils import adb
 import os
 from find import find_oppo, find_self
 
+map_size = 285
+
 # If you already know the device serial
 client = scrcpy.Client(device="DEVICE SERIAL")
 # You can also pass an ADBClient instance to it
 
 adb.connect("127.0.0.1:7555")
 client = scrcpy.Client(device=adb.device_list()[0])
+mask = cv2.imread("mask.png")
+mask = cv2.resize(mask, (map_size, map_size))
 
 def attack():
     # Mousedown
     client.control.touch(1390, 765, scrcpy.ACTION_DOWN)
     # Mouseup
     client.control.touch(1390, 765, scrcpy.ACTION_UP)
-    print("attack")
+    # print("attack")
+
+def skill1():
+    # Mousedown
+    client.control.touch(1123, 791, scrcpy.ACTION_DOWN)
+    # Mouseup
+    client.control.touch(1123, 791, scrcpy.ACTION_UP)
+    # print("attack")
 
 def on_frame(frame):
     # If you set non-blocking (default) in constructor, the frame event receiver 
@@ -26,18 +37,24 @@ def on_frame(frame):
         game = cv2.resize(frame, (640, 360))
         cv2.imshow("HOK", game)
 
-        map = frame[0:285, 0:285]
+        map = frame[0:map_size, 0:map_size]
+        availmap = map[:]
+        availmap[mask<1] = 0
+        diff = cv2.absdiff(availmap, mask)
+        
+
         try:
-            (self_x, self_y) = find_self(map)
-            (oppo_x, oppo_y) = find_oppo(map)
+            (self_x, self_y) = find_self(diff)
+            (oppo_x, oppo_y) = find_oppo(diff)
             map = cv2.rectangle(map, (self_x+15, self_y+15), (self_x-15, self_y-15), (100, 255, 100), 3)
             map = cv2.rectangle(map, (oppo_x+15, oppo_y+15), (oppo_x-15, oppo_y-15), (100, 100, 255), 3)
-            print((self_x-oppo_x)**2 + (self_y-oppo_y)**2)
-            if (self_x-oppo_x)**2 + (self_y-oppo_y)**2 <1000:
-                attack()
+
+            if (self_x-oppo_x)**2 + (self_y-oppo_y)**2 <1500:
+                skill1()
         except:
             pass
             # print("error")
+        cv2.imshow("diff", diff)
         cv2.imshow("map", map)
 
         # attack()
