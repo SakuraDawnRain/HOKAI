@@ -4,6 +4,15 @@ import json
 
 # functions to make state and action data
 
+def compression(data):
+    result = [0, 0, 0, 0, 0, 0, 0, 0]
+    for i in range(8):
+        result[i] = sum(data[i*4:i*4+4])
+    return result
+
+def get_pos(data):
+    return data.index(max(data))
+
 def get_self_data(map):
     (test_B, test_G, test_R) = cv2.split(map)
     result = test_G[:]

@@ -11,7 +11,16 @@ python HOKAI.py
 
 当前使用mumu模拟器 如果使用其他模拟器 需要更改adb连接设置
 
-分辨率为1600*900
+分辨率为1600*900 
+
+系统为windows10 显示缩放为125%
+
+
+```
+pip install scrcpy-client[ui]
+pip install pywin32
+pip install pynput
+```
 
 Data
 

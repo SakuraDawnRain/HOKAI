@@ -111,3 +111,10 @@ class PolicyGradientAgent():
         action = action_dist.sample()
         log_prob = action_dist.log_prob(action)
         return action.item(), log_prob
+    
+
+# class ConvPolicyNet(torch.nn.Module):
+#     def __init__(self, in_channels=3, action_dim=5):
+#         super(ConvPolicyNet, self).__init__()
+#         self.conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=16, kernel_size=3, stride=2, padding=0)
+
