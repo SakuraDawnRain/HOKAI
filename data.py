@@ -94,3 +94,26 @@ def get_processed_map(map):
     grey_map = cv2.cvtColor(map, cv2.COLOR_BGR2GRAY)
 
     return np.stack([self_result, oppo_result, grey_map], axis=-1)
+
+
+def get_processed_centermap(centermap):
+    (test_B, test_G, test_R) = cv2.split(centermap)
+    self_result = test_G.copy()
+    oppo_result = test_G.copy()
+    result = test_G.copy()
+
+    self_result[test_G<130] = 0
+    self_result[test_R>130] = 0
+    self_result[test_B>130] = 0
+
+    oppo_result[test_G>100] = 0
+    oppo_result[test_R<100] = 0
+    oppo_result[test_B>100] = 0
+    oppo_result[test_R<test_G+test_B] = 0
+
+    result[:] = 127
+    result[self_result>0] = 255
+    result[oppo_result>0] = 0
+    return result
+
+    

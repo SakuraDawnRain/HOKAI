@@ -14,8 +14,8 @@ import random
 from find import find_oppo, find_self
 from detect import Detector, check_opponent_state, check_opponent_alive, check_self_alive
 from actions import act
-from reinforce import PolicyNet, PolicyNetPlus
-from data import get_oppo_data, get_self_data, get_processed_map, get_pos
+from reinforce import PolicyNet, PolicyNetPlus, PolicCNN
+from data import get_oppo_data, get_self_data, get_processed_map, get_pos, get_processed_centermap
 
 map_size = 285
 
@@ -32,13 +32,16 @@ action_dim = 5
 learning_rate = 0.01
 gamma = 0.98
 
-Net = PolicyNet(state_dim, hidden_dim, action_dim)
+Net = PolicCNN(in_channels=1, action_dim=5)
+Net.load_state_dict(torch.load("PolicCNN.pth"))
+transforms = transforms.Compose([transforms.ToTensor(), transforms.Resize((28, 28))])
+
+# Net = PolicyNet(state_dim, hidden_dim, action_dim)
 # Net.load_state_dict(torch.load("PolicyNetMini"))
 
 # PolicyResNet = resnet18()
 # PolicyResNet.fc = torch.nn.Sequential(torch.nn.Linear(in_features=512, out_features=action_dim), torch.nn.Softmax(dim=1))
 # PolicyResNet.load_state_dict(torch.load("PolicyResNet"))
-# transforms = transforms.Compose([transforms.ToTensor(), transforms.Resize((224, 224))])
 
 # mask = cv2.imread("mask.png")
 # mask = cv2.resize(mask, (map_size, map_size))
@@ -76,14 +79,12 @@ def on_frame(frame):
         map = frame[0:map_size, 0:map_size]
         
         global self_pos 
-        global enemy_pos 
-        global both_pos
         global detect_counter
         detect_counter += 1
-        d = 40
         centermap = map[map_size//4:map_size-(map_size//4), map_size//4:map_size-(map_size//4)]
-
         cv2.imshow("center", centermap)
+        centermap = get_processed_centermap(centermap)
+        cv2.imshow("processed", centermap)
 
         # input_map = cv2.resize(centermap, (8, 8))
         
@@ -98,13 +99,13 @@ def on_frame(frame):
             if self_pos>4:
                 choice = 0 if random.random()<0.5 else 3
             else:
-                pred = Net(model_input)
+                pred = Net(transforms(centermap))
+                print(pred)
                 action_dist = torch.distributions.Categorical(pred)
                 choice = action_dist.sample()
             action[choice] = True
-            # print(action)
             
-            # act(action)
+            act(action)
         
     cv2.waitKey(1)
 

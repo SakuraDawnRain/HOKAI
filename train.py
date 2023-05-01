@@ -4,13 +4,14 @@ from adbutils import adb
 from pynput import keyboard
 import numpy as np
 import torch
+import random
 
 from find import find_oppo, find_self
 from detect import Detector, check_opponent_state, check_opponent_alive, check_self_alive
 from actions import act
-from data import get_oppo_data, get_self_data, make_data, save_data, get_processed_map
-from reinforce import PolicyNet, PolicyNetPlus
-from torchvision.models import resnet18
+from data import get_oppo_data, get_self_data, make_data, save_data, get_processed_centermap, get_pos
+from reinforce import PolicyNet, PolicyNetPlus, PolicCNN
+# from torchvision.models import resnet18
 from torchvision import transforms
 
 map_size = 285
@@ -48,6 +49,9 @@ datalist = []
 global filename
 filename = "01.json"
 
+global steps
+steps = 0
+
 # If you already know the device serial
 client = scrcpy.Client(device="DEVICE SERIAL")
 # You can also pass an ADBClient instance to it
@@ -62,7 +66,9 @@ learning_rate = 0.1
 gamma = 0.98
 device = 'cpu'
 
-Net = PolicyNet(state_dim, hidden_dim, action_dim)
+Net = PolicCNN(in_channels=1, action_dim=5)
+transforms = transforms.Compose([transforms.ToTensor(), transforms.Resize((28, 28))])
+# Net = PolicyNet(state_dim, hidden_dim, action_dim)
 # Net.load_state_dict(torch.load("PolicyNetMini"))
 
 # Net = PolicyNetPlus(state_dim, hidden_dim, action_dim)
@@ -70,7 +76,7 @@ Net = PolicyNet(state_dim, hidden_dim, action_dim)
 
 # PolicyResNet = resnet18()
 # PolicyResNet.fc = torch.nn.Sequential(torch.nn.Linear(in_features=512, out_features=action_dim), torch.nn.Softmax(dim=1))
-# transforms = transforms.Compose([transforms.ToTensor(), transforms.Resize((224, 224))])
+
 # PolicyResNet.load_state_dict(torch.load("PolicyResNet"))
 
 Loss = torch.nn.BCELoss()
@@ -85,31 +91,40 @@ def compression(data):
 def on_frame(frame):
     if frame is not None:
         # frame is an bgr numpy ndarray (cv2' default format)
+        global self_pos 
         global detect_counter
+        global steps
         detect_counter += 1
+
         map = frame[0:map_size, 0:map_size]
-        cv2.imshow("map", map)
+        centermap = map[map_size//4:map_size-(map_size//4), map_size//4:map_size-(map_size//4)]
+        cv2.imshow("center", centermap)
+        centermap = get_processed_centermap(centermap)
+        cv2.imshow("processed", centermap)
 
-
-        self_data = get_self_data(map).tolist()
-        oppo_data = get_oppo_data(map).tolist()
-
-        c_self_data = compression(self_data)
-        c_oppo_data = compression(oppo_data)
+        # input_map = cv2.resize(centermap, (8, 8))
         
-        self_state = check_self_alive(frame)
-        oppo_state = check_opponent_alive(frame)
-            
-        optimizer.zero_grad()
-        state = torch.FloatTensor([c_self_data + c_oppo_data])
-        # print([w, a, s, d, att])
+        if detect_counter % 4 == 0:
+            self_data = compression(get_self_data(map).tolist())
+            oppo_data = compression(get_oppo_data(map).tolist())
+            model_input = torch.FloatTensor([self_data+oppo_data])
+            # state = transforms(map).unsqueeze(0)
+            self_pos = get_pos(self_data)
+            action = [False, False, False, False, False]
+            print(self_pos)
+            if self_pos>4:
+                choice = 0 if random.random()<0.5 else 3
+            else:
+                optimizer.zero_grad()
+                pred = Net(transforms(centermap))
         
-        action = torch.FloatTensor([[w, a, s, d, att]])
-        # state = transforms(map).unsqueeze(0)
-        pred = Net(state)
-        loss = Loss(pred, action)
-        loss.backward()
-        optimizer.step()
+                action = torch.FloatTensor([[w, a, s, d, att]])
+                loss = Loss(pred, action)
+                loss.backward()
+                optimizer.step()
+                steps += 1
+                print("step:", steps)
+                print("loss:", loss.item())
 
     cv2.waitKey(1)
 
@@ -164,7 +179,7 @@ def on_release(key):
     if key == keyboard.Key.esc:
         # Stop listener
         
-        torch.save(Net.state_dict(), "PolicyNetMini")
+        torch.save(Net.state_dict(), "PolicCNN.pth")
         print("model saved")
         return False
 
