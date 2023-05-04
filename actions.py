@@ -20,16 +20,16 @@ def LeftClick(pos):
     win32api.SendMessage(hwnd, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, long_position)
 
 # UP
-w_pos = (640, 100)
+w_pos = (640, 320)
 
 # LEFT 
-a_pos = (400, 420)
+a_pos = (540, 420)
 
 # DOWN
-s_pos = (640, 600)
+s_pos = (640, 520)
 
 # RIGHT
-d_pos = (900, 420)
+d_pos = (740, 420)
 
 # Attack
 att_pos = (1100, 650)

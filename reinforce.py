@@ -124,7 +124,7 @@ class PolicCNN(torch.nn.Module):
         self.fc1 = nn.Linear(64*7*7,1024)
         self.fc2 = nn.Linear(1024,512)
         self.fc3 = nn.Linear(512,5)
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=0)
 
     def forward(self,x):
         x = self.pool(F.relu(self.conv1(x)))

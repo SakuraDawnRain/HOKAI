@@ -64,6 +64,9 @@ last_move = {
     "d" : False
 }
 
+global attack_counter
+attack_counter = 0
+
 
 def compression(data):
     result = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -80,6 +83,7 @@ def on_frame(frame):
         
         global self_pos 
         global detect_counter
+        global attack_counter
         detect_counter += 1
         centermap = map[map_size//4:map_size-(map_size//4), map_size//4:map_size-(map_size//4)]
         cv2.imshow("center", centermap)
@@ -94,15 +98,24 @@ def on_frame(frame):
             model_input = torch.FloatTensor([self_data+oppo_data])
             # state = transforms(map).unsqueeze(0)
             self_pos = get_pos(self_data)
+            # print(self_pos)
             action = [False, False, False, False, False]
             print(self_pos)
             if self_pos>4:
                 choice = 0 if random.random()<0.5 else 3
+            elif self_pos<4:
+                choice = 1 if random.random()<0.5 else 2
             else:
-                pred = Net(transforms(centermap))
-                print(pred)
-                action_dist = torch.distributions.Categorical(pred)
-                choice = action_dist.sample()
+                if attack_counter>0:
+                    choice = 4
+                    attack_counter = attack_counter-1
+                else:
+                    pred = Net(transforms(centermap))
+                    print(pred)
+                    action_dist = torch.distributions.Categorical(pred)
+                    choice = action_dist.sample()
+                    if choice == 4:
+                        attack_counter = 3
             action[choice] = True
             
             act(action)

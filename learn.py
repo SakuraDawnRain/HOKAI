@@ -15,7 +15,7 @@ from find import find_oppo, find_self
 from detect import Detector, check_opponent_state, check_opponent_alive, check_self_alive
 from actions import act
 from reinforce import PolicyNet, PolicyNetPlus, PolicCNN
-from data import get_oppo_data, get_self_data, get_processed_map, get_pos, get_processed_centermap, compression
+from data import get_oppo_data, get_self_data, get_processed_map, get_pos, get_processed_centermap, compression, center_oppo_count
 from reinforce import REINFORCE
 
 map_size = 285
@@ -34,7 +34,7 @@ gamma = 0.98
 device = 'cpu'
 
 Net = PolicCNN(in_channels=1, action_dim=5)
-Net.load_state_dict(torch.load("PolicCNN.pth"))
+Net.load_state_dict(torch.load("policycnns//PolicCNN2.0.pth"))
 transforms = transforms.Compose([transforms.ToTensor(), transforms.Resize((28, 28))])
 agent = REINFORCE(state_dim, hidden_dim, action_dim, learning_rate, gamma, device)
 agent.policy_net = Net
@@ -127,6 +127,7 @@ def on_frame(frame):
 
         centermap = map[map_size//4:map_size-(map_size//4), map_size//4:map_size-(map_size//4)]
         cv2.imshow("center", centermap)
+        oppo_count = center_oppo_count(centermap)
         centermap = get_processed_centermap(centermap)
         cv2.imshow("processed", centermap)
         
@@ -146,20 +147,29 @@ def on_frame(frame):
                 choice = 0 if random.random()<0.5 else 3
                 action[choice] = True
                 act(action)
-            else:
-                model_input = transforms(centermap)
-                model_output = agent.take_action(model_input)
-                action[model_output] = True
+            elif self_pos<4:
+                choice = 1 if random.random()<0.5 else 2
+                action[choice] = True
                 act(action)
-                # print(action)
+            else:
+                attack_reward = 0
+                model_input = transforms(centermap)
+                choice = agent.take_action(model_input)
+                if oppo_count>300:
+                    if choice==4:
+                        attack_reward += 100
+                        print("give attack reward")
+                action[choice] = True
+                act(action)
                 self_state = check_self_alive(frame)
                 oppo_state = check_opponent_alive(frame)
                 reward = cal_score(self_state, oppo_state)
-                transition_dict["actions"].append(model_output)
+
+                transition_dict["actions"].append(choice)
                 transition_dict["states"].append(centermap)
-                transition_dict["rewards"].append(reward+user_def_reward)
+                transition_dict["rewards"].append(reward+user_def_reward+attack_reward)
                 agent.update(transition_dict)
-                print("user def reward:", user_def_reward)
+                # print("user def reward:", user_def_reward)
                 user_def_reward = 0
 
                 global steps

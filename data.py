@@ -116,4 +116,12 @@ def get_processed_centermap(centermap):
     result[oppo_result>0] = 0
     return result
 
-    
+def center_oppo_count(centermap):
+    (test_B, test_G, test_R) = cv2.split(centermap)
+    oppo_result = test_G.copy()
+    oppo_result[test_G>100] = 0
+    oppo_result[test_R<100] = 0
+    oppo_result[test_B>100] = 0
+    oppo_result[test_R<test_G+test_B] = 0
+    oppo_result[oppo_result>0] = 1
+    return np.sum(oppo_result)
